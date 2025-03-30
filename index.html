@@ -347,88 +347,69 @@
     initializeCamera();
   }
 
-  async function uploadAndFinish() {
-    try {
-      showCameraStatus('Saving your photo...', '');
-      
-      // 1. Verify we have a paired user ID
-      if (!pairedUserId) {
-        throw new Error('No paired user found');
+    async function uploadAndFinish() {
+      try {
+        showCameraStatus('Saving your photo...', '');
+        
+        if (!pairedUserId) {
+          throw new Error('No paired user found');
+        }
+    
+        const blob = await new Promise((resolve, reject) => {
+          canvas.toBlob(blob => {
+            if (!blob) reject(new Error('Failed to create image blob'));
+            resolve(blob);
+          }, 'image/jpeg', 0.85);
+        });
+    
+        const storageRef = storage.ref();
+        const timestamp = Date.now();
+        const photoName = `user_photos/${pairedUserId}/${timestamp}.jpg`;
+        const photoRef = storageRef.child(photoName);
+    
+        const uploadTask = photoRef.put(blob, {
+          contentType: 'image/jpeg',
+          customMetadata: {
+            userId: pairedUserId,
+            uploadedAt: new Date().toISOString()
+          }
+        });
+    
+        uploadTask.on('state_changed',
+          null,
+          (error) => {
+            console.error('Upload error:', error);
+            showCameraStatus('Upload failed. Please try again.', 'error');
+            retakeBtn.classList.remove('hidden');
+            useBtn.classList.remove('hidden');
+          },
+          async () => {
+            try {
+              const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
+              
+              await db.collection('userPhotos').add({
+                userId: pairedUserId,
+                url: downloadURL,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                storagePath: photoName,
+                status: 'uploaded'
+              });
+    
+              cameraSection.classList.remove('active');
+              completionSection.classList.add('active');
+            } catch (dbError) {
+              console.error('Firestore save error:', dbError);
+              showCameraStatus('Photo uploaded but failed to save details.', 'error');
+            }
+          }
+        );
+      } catch (error) {
+        console.error('Upload process error:', error);
+        showCameraStatus('Error: ' + error.message, 'error');
+        retakeBtn.classList.remove('hidden');
+        useBtn.classList.remove('hidden');
       }
-
-      // 2. Convert canvas to blob with error handling
-      const blob = await new Promise((resolve, reject) => {
-        canvas.toBlob(blob => {
-          if (!blob) {
-            reject(new Error('Failed to create image blob'));
-            return;
-          }
-          resolve(blob);
-        }, 'image/jpeg', 0.85);
-      });
-
-      // 3. Create storage reference
-      const storageRef = storage.ref();
-      const timestamp = Date.now();
-      const photoName = `user_photos/${pairedUserId}/${timestamp}.jpg`;
-      const photoRef = storageRef.child(photoName);
-
-      // 4. Upload with metadata
-      const uploadTask = photoRef.put(blob, {
-        contentType: 'image/jpeg',
-        customMetadata: {
-          userId: pairedUserId,
-          uploadedAt: new Date().toISOString()
-        }
-      });
-
-      // 5. Set up upload state listeners
-      uploadTask.on('state_changed',
-        (snapshot) => {
-          // Progress tracking (optional)
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          console.log(`Upload progress: ${progress}%`);
-        },
-        (error) => {
-          console.error('Upload error:', error);
-          showCameraStatus('Upload failed. Please try again.', 'error');
-          // Reset buttons for retry
-          retakeBtn.classList.remove('hidden');
-          useBtn.classList.remove('hidden');
-        },
-        async () => {
-          try {
-            // 6. Get download URL after successful upload
-            const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
-            console.log('File available at', downloadURL);
-
-            // 7. Save to Firestore
-            await db.collection('userPhotos').add({
-              userId: pairedUserId,
-              url: downloadURL,
-              timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-              storagePath: photoName,
-              status: 'uploaded'
-            });
-
-            // 8. Show success
-            cameraSection.classList.remove('active');
-            completionSection.classList.add('active');
-          } catch (dbError) {
-            console.error('Firestore save error:', dbError);
-            showCameraStatus('Photo uploaded but failed to save details.', 'error');
-          }
-        }
-      );
-
-    } catch (error) {
-      console.error('Upload process error:', error);
-      showCameraStatus('Error: ' + error.message, 'error');
-      // Keep buttons visible for retry
-      retakeBtn.classList.remove('hidden');
-      useBtn.classList.remove('hidden');
     }
-  }
 
   // Helper functions
   function showStatus(message, type) {
