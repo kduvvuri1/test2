@@ -134,10 +134,10 @@
         <!-- Pairing Section -->
         <div id="pairing-section" class="section active bg-white rounded-xl shadow-md p-4 mx-auto">
             <h2 class="text-lg font-semibold mb-3 text-center">🔗 Pair Device</h2>
-            <p class="text-gray-600 mb-3 text-center text-sm">Enter the pairing code from your dashboard</p>
+            <p class="text-gray-600 mb-3 text-center text-sm">Enter the 6-digit code from your dashboard</p>
             
             <input type="text" id="pairing-code" placeholder="Enter code" maxlength="6" 
-                   class="code-input font-mono tracking-widest">
+                   class="code-input uppercase font-mono tracking-widest" inputmode="numeric" pattern="[0-9A-Za-z]*">
             
             <div class="flex justify-center mt-2">
                 <button id="pair-button" class="btn btn-primary">
@@ -218,10 +218,10 @@
 
   // Pairing logic
   pairButton.addEventListener('click', async () => {
-    const code = pairingCodeInput.value.trim();
+    const code = pairingCodeInput.value.trim().toUpperCase();
     
     if (!code || code.length !== 6) {
-        showStatus('Please enter a valid 6-character code', 'error');
+        showStatus('Please enter a valid 6-digit code', 'error');
         return;
     }
 
@@ -242,13 +242,9 @@
         }
 
         await docRef.update({
-          status: 'completed',
-          pairedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          deviceInfo: {
-            userAgent: navigator.userAgent,
-            platform: navigator.platform,
-            pairedUserId: data.userId // Important for rules to verify
-          }
+            status: 'completed',
+            pairedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            pairedUserId: data.userId
         });
         
         pairedUserId = data.userId;
@@ -351,69 +347,69 @@
     initializeCamera();
   }
 
-    async function uploadAndFinish() {
-      try {
-        showCameraStatus('Saving your photo...', '');
-        
-        if (!pairedUserId) {
-          throw new Error('No paired user found');
-        }
-    
-        const blob = await new Promise((resolve, reject) => {
-          canvas.toBlob(blob => {
-            if (!blob) reject(new Error('Failed to create image blob'));
-            resolve(blob);
-          }, 'image/jpeg', 0.85);
-        });
-    
-        const storageRef = storage.ref();
-        const timestamp = Date.now();
-        const photoName = `user_photos/${pairedUserId}/${timestamp}.jpg`;
-        const photoRef = storageRef.child(photoName);
-    
-        const uploadTask = photoRef.put(blob, {
-          contentType: 'image/jpeg',
-          customMetadata: {
-            userId: pairedUserId,
-            uploadedAt: new Date().toISOString()
-          }
-        });
-    
-        uploadTask.on('state_changed',
-          null,
-          (error) => {
-            console.error('Upload error:', error);
-            showCameraStatus('Upload failed. Please try again.', 'error');
-            retakeBtn.classList.remove('hidden');
-            useBtn.classList.remove('hidden');
-          },
-          async () => {
-            try {
-              const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
-              
-              await db.collection('userPhotos').add({
-                userId: pairedUserId,
-                url: downloadURL,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                storagePath: photoName,
-                status: 'uploaded'
-              });
-    
-              cameraSection.classList.remove('active');
-              completionSection.classList.add('active');
-            } catch (dbError) {
-              console.error('Firestore save error:', dbError);
-              showCameraStatus('Photo uploaded but failed to save details.', 'error');
-            }
-          }
-        );
-      } catch (error) {
-        console.error('Upload process error:', error);
-        showCameraStatus('Error: ' + error.message, 'error');
-        retakeBtn.classList.remove('hidden');
-        useBtn.classList.remove('hidden');
+  async function uploadAndFinish() {
+    try {
+      showCameraStatus('Saving your photo...', '');
+      
+      // Convert canvas to blob
+      const blob = await new Promise(resolve => {
+        canvas.toBlob(resolve, 'image/jpeg', 0.85); // Slightly lower quality for faster upload
+      });
+      
+      if (!blob) {
+        throw new Error('Failed to create image');
       }
+      
+      // Create unique filename
+      const photoName = `user_photos/${pairedUserId}/${Date.now()}.jpg`;
+      const photoRef = storage.ref().child(photoName);
+      
+      // Upload to Firebase Storage with metadata
+      const uploadTask = photoRef.put(blob, {
+        customMetadata: {
+          orientation: window.screen.orientation.type,
+          deviceWidth: window.screen.width.toString(),
+          deviceHeight: window.screen.height.toString()
+        }
+      });
+      
+      uploadTask.on('state_changed',
+        null,
+        error => {
+          showCameraStatus('Upload failed: ' + error.message, 'error');
+          retakePhoto(); // Allow user to try again
+        },
+        async () => {
+          // Get download URL
+          const url = await uploadTask.snapshot.ref.getDownloadURL();
+          
+          // Save to Firestore
+          await db.collection('userPhotos').add({
+            userId: pairedUserId,
+            url: url,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            orientation: window.screen.orientation.type,
+            deviceInfo: {
+              width: window.screen.width,
+              height: window.screen.height
+            }
+          });
+          
+          // Show completion screen
+          cameraSection.classList.remove('active');
+          completionSection.classList.add('active');
+          
+          // Clean up
+          if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+          }
+        }
+      );
+    } catch (err) {
+      showCameraStatus('Error: ' + err.message, 'error');
+      console.error('Upload error:', err);
     }
+  }
 
   // Helper functions
   function showStatus(message, type) {
@@ -441,6 +437,11 @@
       e.preventDefault();
       pairButton.click();
     }
+  });
+  
+  // Better mobile keyboard handling
+  pairingCodeInput.addEventListener('input', (e) => {
+    e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
   });
 </script>
 </body>
