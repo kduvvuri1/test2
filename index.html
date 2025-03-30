@@ -242,9 +242,13 @@
         }
 
         await docRef.update({
-            status: 'completed',
-            pairedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            pairedUserId: data.userId
+          status: 'completed',
+          pairedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          deviceInfo: {
+            userAgent: navigator.userAgent,
+            platform: navigator.platform,
+            pairedUserId: data.userId // Important for rules to verify
+          }
         });
         
         pairedUserId = data.userId;
