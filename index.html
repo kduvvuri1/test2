@@ -134,10 +134,10 @@
         <!-- Pairing Section -->
         <div id="pairing-section" class="section active bg-white rounded-xl shadow-md p-4 mx-auto">
             <h2 class="text-lg font-semibold mb-3 text-center">🔗 Pair Device</h2>
-            <p class="text-gray-600 mb-3 text-center text-sm">Enter the 6-digit code from your dashboard</p>
+            <p class="text-gray-600 mb-3 text-center text-sm">Enter the pairing code from your dashboard</p>
             
             <input type="text" id="pairing-code" placeholder="Enter code" maxlength="6" 
-                   class="code-input uppercase font-mono tracking-widest" inputmode="numeric" pattern="[0-9A-Za-z]*">
+                   class="code-input font-mono tracking-widest">
             
             <div class="flex justify-center mt-2">
                 <button id="pair-button" class="btn btn-primary">
@@ -438,11 +438,10 @@
       pairButton.click();
     }
   });
-  
-  // Better mobile keyboard handling
-  pairingCodeInput.addEventListener('input', (e) => {
-    e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  });
+
+    pairingCodeInput.addEventListener('input', (e) => {
+      e.target.value = e.target.value.toUpperCase();
+    });
 </script>
 </body>
 </html>
