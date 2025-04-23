@@ -1,307 +1,217 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CaughtMyEye - Mobile Capture</title>
-    <!-- Tailwind via CDN for quick styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* Custom styles optimized for mobile */
-        #video, #canvas {
-            width: 100%;
-            height: auto;
-            max-height: 60vh;
-            border-radius: 0.5rem;
-            border: 2px solid #3b82f6;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            background: #000;
-            transform: rotateY(180deg); /* Mirror the video for more natural feel */
-        }
-        
-        #canvas {
-            display: none;
-            margin-top: 1rem;
-            transform: rotateY(180deg); /* Match video mirroring */
-        }
-        
-        .section {
-            display: none;
-            padding: 1rem;
-            width: 100%;
-            box-sizing: border-box;
-        }
-        
-        .section.active {
-            display: block;
-        }
-        
-        .btn {
-            padding: 0.75rem 1.25rem;
-            border-radius: 0.375rem;
-            font-weight: 600;
-            transition: all 0.2s;
-            margin: 0.25rem;
-            font-size: 0.95rem;
-            flex-grow: 1;
-            max-width: 45%;
-            text-align: center;
-        }
-        
-        .btn-primary {
-            background-color: #3b82f6;
-            color: white;
-        }
-        
-        .btn-primary:active {
-            background-color: #2563eb;
-        }
-        
-        .btn-secondary {
-            background-color: #e5e7eb;
-            color: #374151;
-        }
-        
-        .btn-secondary:active {
-            background-color: #d1d5db;
-        }
-        
-        .btn-success {
-            background-color: #10b981;
-            color: white;
-        }
-        
-        .btn-success:active {
-            background-color: #059669;
-        }
-        
-        .status {
-            padding: 0.75rem;
-            border-radius: 0.375rem;
-            margin: 0.75rem 0;
-            font-size: 0.9rem;
-        }
-        
-        .status-success {
-            background-color: #d1fae5;
-            color: #065f46;
-        }
-        
-        .status-error {
-            background-color: #fee2e2;
-            color: #b91c1c;
-        }
-        
-        .completion-message {
-            text-align: center;
-            padding: 1.5rem;
-            color: #1f2937;
-        }
-        
-        .code-input {
-            width: 100%;
-            padding: 0.75rem;
-            border: 2px solid #3b82f6;
-            border-radius: 0.375rem;
-            font-size: 1.1rem;
-            text-align: center;
-            margin: 1rem auto;
-            display: block;
-            box-sizing: border-box;
-        }
-        
-        /* Prevent zooming on input focus */
-        input, select, textarea {
-            font-size: 16px !important;
-        }
-        
-        /* Better mobile tap targets */
-        button, input[type="submit"], input[type="button"] {
-            -webkit-tap-highlight-color: transparent;
-        }
-    </style>
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>CaughtMyEye - Mobile Capture</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
+  <style>
+    #video, #canvas {
+      width: 100%;
+      height: auto;
+      max-height: 60vh;
+      border-radius: 0.5rem;
+      border: 2px solid #3b82f6;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      background: #000;
+      transform: rotateY(180deg);
+    }
+    #canvas {
+      display: none;
+      margin-top: 1rem;
+      transform: rotateY(180deg);
+    }
+    .section {
+      display: none;
+      padding: 1rem;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .section.active {
+      display: block;
+    }
+    .btn {
+      padding: 0.75rem 1.25rem;
+      border-radius: 0.375rem;
+      font-weight: 600;
+      margin: 0.25rem;
+      font-size: 0.95rem;
+      flex-grow: 1;
+      max-width: 45%;
+      text-align: center;
+    }
+    .btn-primary { background-color: #3b82f6; color: white; }
+    .btn-primary:active { background-color: #2563eb; }
+    .btn-secondary { background-color: #e5e7eb; color: #374151; }
+    .btn-secondary:active { background-color: #d1d5db; }
+    .btn-success { background-color: #10b981; color: white; }
+    .btn-success:active { background-color: #059669; }
+    .status {
+      padding: 0.75rem;
+      border-radius: 0.375rem;
+      margin: 0.75rem 0;
+      font-size: 0.9rem;
+    }
+    .status-success { background-color: #d1fae5; color: #065f46; }
+    .status-error { background-color: #fee2e2; color: #b91c1c; }
+    .completion-message {
+      text-align: center;
+      padding: 1.5rem;
+      color: #1f2937;
+    }
+    .code-input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 2px solid #3b82f6;
+      border-radius: 0.375rem;
+      font-size: 1.1rem;
+      text-align: center;
+      margin: 1rem auto;
+      display: block;
+      box-sizing: border-box;
+    }
+    input, select, textarea {
+      font-size: 16px !important;
+    }
+    button, input[type="submit"], input[type="button"] {
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
-    <div class="bg-blue-500 text-white p-3 text-center text-lg font-bold fixed top-0 left-0 right-0 z-50 shadow-md">
-        CaughtMyEye
+  <div class="bg-blue-500 text-white p-3 text-center text-lg font-bold fixed top-0 left-0 right-0 z-50 shadow-md">
+    CaughtMyEye
+  </div>
+
+  <div class="container mx-auto px-3 pt-16 pb-4">
+    <div id="pairing-section" class="section active bg-white rounded-xl shadow-md p-4 mx-auto">
+      <h2 class="text-lg font-semibold mb-3 text-center">🔗 Pair Device</h2>
+      <input type="text" id="pairing-code" placeholder="Enter code" maxlength="6" class="code-input font-mono tracking-widest" />
+      <div class="flex justify-center mt-2">
+        <button id="pair-button" class="btn btn-primary">Pair Device</button>
+      </div>
+      <div id="status" class="status"></div>
     </div>
 
-    <div class="container mx-auto px-3 pt-16 pb-4">
-        <!-- Pairing Section -->
-        <div id="pairing-section" class="section active bg-white rounded-xl shadow-md p-4 mx-auto">
-            <h2 class="text-lg font-semibold mb-3 text-center">🔗 Pair Device</h2>
-            <p class="text-gray-600 mb-3 text-center text-sm">Enter the pairing code from your dashboard</p>
-            
-            <input type="text" id="pairing-code" placeholder="Enter code" maxlength="6" 
-                   class="code-input font-mono tracking-widest">
-            
-            <div class="flex justify-center mt-2">
-                <button id="pair-button" class="btn btn-primary">
-                    Pair Device
-                </button>
-            </div>
-            
-            <div id="status" class="status"></div>
-        </div>
-
-        <!-- Camera Section -->
-        <div id="camera-section" class="section bg-white rounded-xl shadow-md p-4 mx-auto">
-            <h2 class="text-lg font-semibold mb-3 text-center">📷 Capture Landmark</h2>
-            
-            <div class="relative">
-                <video id="video" autoplay playsinline></video>
-                <canvas id="canvas"></canvas>
-            </div>
-            
-            <div class="flex flex-wrap justify-center mt-3">
-                <button id="capture" class="btn btn-primary">
-                    📸 Capture
-                </button>
-                <button id="retake" class="btn btn-secondary hidden">
-                    🔄 Retake
-                </button>
-                <button id="use" class="btn btn-success hidden">
-                    ✅ Use
-                </button>
-            </div>
-            
-            <div id="camera-status" class="status"></div>
-        </div>
-        
-        <!-- Completion Section -->
-        <div id="completion-section" class="section bg-white rounded-xl shadow-md p-4 mx-auto">
-            <div class="completion-message">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-14 w-14 text-green-500 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
-                <h2 class="text-xl font-bold text-green-600 mb-2">Photo Uploaded!</h2>
-                <p class="text-gray-600 mb-3 text-sm">Your image has been sent to the dashboard</p>
-                <p class="text-xs text-gray-500">You may now close this window</p>
-            </div>
-        </div>
+    <div id="camera-section" class="section bg-white rounded-xl shadow-md p-4 mx-auto">
+      <h2 class="text-lg font-semibold mb-3 text-center">📷 Capture Landmark</h2>
+      <div class="relative">
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas"></canvas>
+      </div>
+      <div class="flex flex-wrap justify-center mt-3">
+        <button id="capture" class="btn btn-primary">📸 Capture</button>
+        <button id="retake" class="btn btn-secondary hidden">🔄 Retake</button>
+        <button id="use" class="btn btn-success hidden">✅ Use</button>
+      </div>
+      <div id="camera-status" class="status"></div>
     </div>
 
-<script>
-  // Firebase initialization
-  const firebaseConfig = {
-    apiKey: "AIzaSyD6QROJZ1Y3ZfiugqBxpPeeuQ7J3K22CbQ",
-    authDomain: "first-project-418816.firebaseapp.com",
-    projectId: "first-project-418816",
-    storageBucket: "first-project-418816.firebasestorage.app",
-    messagingSenderId: "750936274957",
-    appId: "1:750936274957:web:7a96ae9d7819f555b3bd44"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-  const storage = firebase.app().storage("gs://first-project-418816.firebasestorage.app");
+    <div id="completion-section" class="section bg-white rounded-xl shadow-md p-4 mx-auto">
+      <div class="completion-message">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-14 w-14 text-green-500 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        <h2 class="text-xl font-bold text-green-600 mb-2">Photo Uploaded!</h2>
+        <p class="text-gray-600 mb-3 text-sm">Your image has been sent to the dashboard</p>
+        <p class="text-xs text-gray-500">You may now close this window</p>
+      </div>
+    </div>
+  </div>
 
-  let pairedUserId = null;
-  let stream = null;
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD6QROJZ1Y3ZfiugqBxpPeeuQ7J3K22CbQ",
+      authDomain: "first-project-418816.firebaseapp.com",
+      projectId: "first-project-418816",
+      storageBucket: "first-project-418816.firebasestorage.app",
+      messagingSenderId: "750936274957",
+      appId: "1:750936274957:web:7a96ae9d7819f555b3bd44"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const storage = firebase.storage();
 
-  const pairingSection = document.getElementById('pairing-section');
-  const cameraSection = document.getElementById('camera-section');
-  const completionSection = document.getElementById('completion-section');
-  const pairButton = document.getElementById('pair-button');
-  const pairingCodeInput = document.getElementById('pairing-code');
-  const statusDiv = document.getElementById('status');
-  const cameraStatusDiv = document.getElementById('camera-status');
-  const video = document.getElementById('video');
-  const canvas = document.getElementById('canvas');
-  const captureBtn = document.getElementById('capture');
-  const retakeBtn = document.getElementById('retake');
-  const useBtn = document.getElementById('use');
+    let pairedUserId = null;
+    let stream = null;
 
-  pairButton.addEventListener('click', async () => {
-    const code = pairingCodeInput.value.trim().toUpperCase();
+    const pairingSection = document.getElementById('pairing-section');
+    const cameraSection = document.getElementById('camera-section');
+    const completionSection = document.getElementById('completion-section');
+    const pairButton = document.getElementById('pair-button');
+    const pairingCodeInput = document.getElementById('pairing-code');
+    const statusDiv = document.getElementById('status');
+    const cameraStatusDiv = document.getElementById('camera-status');
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const captureBtn = document.getElementById('capture');
+    const retakeBtn = document.getElementById('retake');
+    const useBtn = document.getElementById('use');
 
-    if (!code || code.length !== 6) {
-      showStatus('Please enter a valid 6-digit code', 'error');
-      return;
-    }
-
-    try {
-      showStatus('Verifying code...', '');
-
-      const docRef = db.collection('pairingCodes').doc(code);
-      const docSnap = await docRef.get();
-
-      if (!docSnap.exists) {
-        throw new Error('Invalid pairing code - please generate a new one');
+    pairButton.addEventListener('click', async () => {
+      const code = pairingCodeInput.value.trim().toUpperCase();
+      if (!code || code.length !== 6) {
+        showStatus('Please enter a valid 6-digit code', 'error');
+        return;
       }
 
-      const data = docSnap.data();
-      console.log("📄 Full pairing doc:", data);
+      try {
+        showStatus('Verifying code...', '');
+        const docRef = db.collection('pairingCodes').doc(code);
+        const docSnap = await docRef.get();
+        if (!docSnap.exists) throw new Error('Invalid pairing code.');
 
-      if (data.status !== 'pending') {
-        throw new Error('This code was already used or expired');
+        const data = docSnap.data();
+        console.log("📄 Full pairing doc:", data);
+
+        if (data.userId === "fallback-user-id") {
+          throw new Error("Invalid pairing. Please refresh your dashboard and try again.");
+        }
+
+        if (data.status !== 'pending') {
+          throw new Error('This code was already used or expired');
+        }
+
+        await docRef.update({
+          status: 'completed',
+          pairedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          pairedUserId: data.userId
+        });
+
+        pairedUserId = data.userId;
+        showStatus('Paired successfully! Loading camera...', 'success');
+
+        setTimeout(() => {
+          pairingSection.classList.remove('active');
+          cameraSection.classList.add('active');
+          initializeCamera();
+        }, 1000);
+      } catch (err) {
+        showStatus('Pairing failed: ' + err.message, 'error');
+        console.error(err);
       }
+    });
 
-      await docRef.update({
-        status: 'completed',
-        pairedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        pairedUserId: data.userId
-      });
-
-      pairedUserId = data.userId;
-      console.log("✅ Paired user ID:", pairedUserId);
-
-      pairingCodeInput.value = "";
-      showStatus('Paired successfully! Loading camera...', 'success');
-
-      setTimeout(() => {
-        pairingSection.classList.remove('active');
-        cameraSection.classList.add('active');
-        initializeCamera();
-      }, 1000);
-    } catch (error) {
-      console.error('Pairing error:', error);
-      showStatus('Pairing failed: ' + error.message, 'error');
+    async function initializeCamera() {
+      if (stream) stream.getTracks().forEach(track => track.stop());
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+          audio: false
+        });
+        video.srcObject = stream;
+        captureBtn.addEventListener('click', capturePhoto);
+        retakeBtn.addEventListener('click', retakePhoto);
+        useBtn.addEventListener('click', uploadAndFinish);
+      } catch (err) {
+        showCameraStatus("Camera error: " + err.message, "error");
+      }
     }
-  });
 
-  async function initializeCamera() {
-    if (stream) stream.getTracks().forEach(track => track.stop());
-
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: "environment",
-          width: { ideal: Math.min(window.screen.width, 1280) },
-          height: { ideal: Math.min(window.screen.height, 720) },
-          frameRate: { ideal: 30 }
-        },
-        audio: false
-      });
-
-      video.srcObject = stream;
-
-      const handleOrientationChange = () => {
-        const isPortrait = window.matchMedia("(orientation: portrait)").matches;
-        video.style.maxHeight = isPortrait ? '60vh' : '50vh';
-      };
-
-      window.addEventListener('orientationchange', handleOrientationChange);
-      handleOrientationChange();
-
-      captureBtn.addEventListener('click', capturePhoto);
-      retakeBtn.addEventListener('click', retakePhoto);
-      useBtn.addEventListener('click', uploadAndFinish);
-
-    } catch (err) {
-      console.error("Camera Error:", err);
-      const message = err.name === 'NotAllowedError'
-        ? 'Camera access was denied. Please enable camera permissions in your browser settings.'
-        : 'Camera error: ' + err.message;
-      showCameraStatus(message, 'error');
-    }
-  }
-
-  function capturePhoto() {
-    try {
+    function capturePhoto() {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       const ctx = canvas.getContext('2d');
@@ -311,37 +221,25 @@
       retakeBtn.classList.remove('hidden');
       useBtn.classList.remove('hidden');
       stream.getTracks().forEach(track => track.stop());
-    } catch (err) {
-      showCameraStatus('Capture failed: ' + err.message, 'error');
-    }
-  }
-
-  function retakePhoto() {
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    canvas.style.display = 'none';
-    captureBtn.classList.remove('hidden');
-    retakeBtn.classList.add('hidden');
-    useBtn.classList.add('hidden');
-    initializeCamera();
-  }
-
-  async function uploadAndFinish() {
-    if (!pairedUserId || pairedUserId === "fallback-user-id") {
-      showCameraStatus("Upload blocked: No valid user paired.", "error");
-      console.error("❌ No valid user paired. Upload canceled.");
-      return;
     }
 
-    try {
-      showCameraStatus('Saving your photo...', '');
+    function retakePhoto() {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      canvas.style.display = 'none';
+      captureBtn.classList.remove('hidden');
+      retakeBtn.classList.add('hidden');
+      useBtn.classList.add('hidden');
+      initializeCamera();
+    }
 
-      const blob = await new Promise(resolve => {
-        canvas.toBlob(resolve, 'image/jpeg', 0.85);
-      });
+    async function uploadAndFinish() {
+      if (!pairedUserId || pairedUserId === "fallback-user-id") {
+        showCameraStatus("Upload blocked: No valid user paired.", "error");
+        return;
+      }
 
-      if (!blob) throw new Error('Failed to create image');
-
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85));
       const photoName = `user_photos/${pairedUserId}/${Date.now()}.jpg`;
       const photoRef = storage.ref().child(photoName);
 
@@ -353,63 +251,41 @@
         }
       });
 
-      uploadTask.on('state_changed',
-        null,
-        error => {
-          showCameraStatus('🚫 Upload failed: ' + (error.code || error.message), 'error');
-          console.error("🔥 Firebase Upload Error:", error);
-          retakePhoto();
-        },
-        async () => {
-          const url = await uploadTask.snapshot.ref.getDownloadURL();
-
-          await db.collection('userPhotos').add({
-            userId: pairedUserId,
-            url,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            orientation: window.screen.orientation.type,
-            deviceInfo: {
-              width: window.screen.width,
-              height: window.screen.height
-            }
-          });
-
-          cameraSection.classList.remove('active');
-          completionSection.classList.add('active');
-          if (stream) stream.getTracks().forEach(track => track.stop());
-        }
-      );
-    } catch (err) {
-      showCameraStatus('Error: ' + err.message, 'error');
-      console.error('Upload error:', err);
+      uploadTask.on('state_changed', null, error => {
+        showCameraStatus("Upload failed: " + error.message, "error");
+      }, async () => {
+        const url = await uploadTask.snapshot.ref.getDownloadURL();
+        await db.collection('userPhotos').add({
+          userId: pairedUserId,
+          url,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        cameraSection.classList.remove('active');
+        completionSection.classList.add('active');
+      });
     }
-  }
 
-  function showStatus(message, type) {
-    statusDiv.textContent = message;
-    statusDiv.className = `status ${type ? 'status-' + type : ''}`;
-    statusDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
-
-  function showCameraStatus(message, type) {
-    cameraStatusDiv.textContent = message;
-    cameraStatusDiv.className = `status ${type ? 'status-' + type : ''}`;
-    cameraStatusDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
-
-  pairingCodeInput.focus();
-  setTimeout(() => pairingCodeInput.focus(), 500);
-
-  pairingCodeInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      pairButton.click();
+    function showStatus(message, type) {
+      statusDiv.textContent = message;
+      statusDiv.className = `status ${type ? 'status-' + type : ''}`;
     }
-  });
 
-  pairingCodeInput.addEventListener('input', (e) => {
-    e.target.value = e.target.value.toUpperCase();
-  });
-</script>
+    function showCameraStatus(message, type) {
+      cameraStatusDiv.textContent = message;
+      cameraStatusDiv.className = `status ${type ? 'status-' + type : ''}`;
+    }
+
+    pairingCodeInput.focus();
+    setTimeout(() => pairingCodeInput.focus(), 500);
+    pairingCodeInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        pairButton.click();
+      }
+    });
+    pairingCodeInput.addEventListener('input', e => {
+      e.target.value = e.target.value.toUpperCase();
+    });
+  </script>
 </body>
 </html>
