@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+Would this give any error then: <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -119,6 +119,28 @@
         button, input[type="submit"], input[type="button"] {
             -webkit-tap-highlight-color: transparent;
         }
+        
+        /* Loading spinner */
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .btn-loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
     </style>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
@@ -137,7 +159,7 @@
             <p class="text-gray-600 mb-3 text-center text-sm">Enter the pairing code from your dashboard</p>
             
             <input type="text" id="pairing-code" placeholder="Enter code" maxlength="6" 
-                   class="code-input font-mono tracking-widest">
+                   class="code-input font-mono tracking-widest" pattern="[A-Za-z0-9]{6}">
             
             <div class="flex justify-center mt-2">
                 <button id="pair-button" class="btn btn-primary">
@@ -201,6 +223,7 @@
 
   let pairedUserId = null;
   let stream = null;
+  let pairingCheckInterval = null;
 
   const pairingSection = document.getElementById('pairing-section');
   const cameraSection = document.getElementById('camera-section');
@@ -215,6 +238,7 @@
   const retakeBtn = document.getElementById('retake');
   const useBtn = document.getElementById('use');
 
+  // Improved pairing function with better error handling
   pairButton.addEventListener('click', async () => {
     const code = pairingCodeInput.value.trim().toUpperCase();
 
@@ -224,10 +248,20 @@
     }
 
     try {
+      // Show loading state
+      pairButton.disabled = true;
+      pairButton.classList.add('btn-loading');
+      pairButton.innerHTML = '<span class="spinner"></span> Pairing...';
+      
       showStatus('Verifying code...', '');
 
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Verification timeout. Please check your connection.')), 10000)
+      );
+
       const docRef = db.collection('pairingCodes').doc(code);
-      const docSnap = await docRef.get();
+      const docSnap = await Promise.race([docRef.get(), timeoutPromise]);
 
       if (!docSnap.exists) {
         throw new Error('Invalid pairing code - please generate a new one');
@@ -238,6 +272,11 @@
 
       if (data.status !== 'pending') {
         throw new Error('This code was already used or expired');
+      }
+
+      // Verify the document has all required fields
+      if (!data.userId || !data.createdAt) {
+        throw new Error('Invalid pairing code format');
       }
 
       await docRef.update({
@@ -252,6 +291,9 @@
       pairingCodeInput.value = "";
       showStatus('Paired successfully! Loading camera...', 'success');
 
+      // Clear any existing interval
+      if (pairingCheckInterval) clearInterval(pairingCheckInterval);
+
       setTimeout(() => {
         pairingSection.classList.remove('active');
         cameraSection.classList.add('active');
@@ -260,11 +302,18 @@
     } catch (error) {
       console.error('Pairing error:', error);
       showStatus('Pairing failed: ' + error.message, 'error');
+    } finally {
+      // Reset button state
+      pairButton.disabled = false;
+      pairButton.classList.remove('btn-loading');
+      pairButton.textContent = 'Pair Device';
     }
   });
 
   async function initializeCamera() {
-    if (stream) stream.getTracks().forEach(track => track.stop());
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+    }
 
     try {
       stream = await navigator.mediaDevices.getUserMedia({
@@ -278,6 +327,10 @@
       });
 
       video.srcObject = stream;
+      video.play().catch(err => {
+        console.error("Video play error:", err);
+        showCameraStatus('Camera error: ' + err.message, 'error');
+      });
 
       const handleOrientationChange = () => {
         const isPortrait = window.matchMedia("(orientation: portrait)").matches;
@@ -335,6 +388,8 @@
 
     try {
       showCameraStatus('Saving your photo...', '');
+      useBtn.disabled = true;
+      useBtn.innerHTML = '<span class="spinner"></span> Uploading...';
 
       const blob = await new Promise(resolve => {
         canvas.toBlob(resolve, 'image/jpeg', 0.85);
@@ -382,6 +437,9 @@
     } catch (err) {
       showCameraStatus('Error: ' + err.message, 'error');
       console.error('Upload error:', err);
+    } finally {
+      useBtn.disabled = false;
+      useBtn.textContent = '✅ Use';
     }
   }
 
@@ -397,6 +455,7 @@
     cameraStatusDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
+  // Initialize
   pairingCodeInput.focus();
   setTimeout(() => pairingCodeInput.focus(), 500);
 
@@ -408,7 +467,13 @@
   });
 
   pairingCodeInput.addEventListener('input', (e) => {
-    e.target.value = e.target.value.toUpperCase();
+    e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  });
+
+  // Clean up on page unload
+  window.addEventListener('beforeunload', () => {
+    if (stream) stream.getTracks().forEach(track => track.stop());
+    if (pairingCheckInterval) clearInterval(pairingCheckInterval);
   });
 </script>
 </body>
