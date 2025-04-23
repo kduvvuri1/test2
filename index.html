@@ -233,30 +233,24 @@
         throw new Error('Invalid pairing code - please generate a new one');
       }
 
-    const data = docSnap.data();
-    console.log("📄 Full pairing doc:", data);
-    
-    // 🚫 Validate userId before continuing
-    if (!data.userId || data.userId === "fallback-user-id") {
-      throw new Error("Invalid pairing. Please refresh your dashboard and try again.");
-    }
-    
-    if (data.status !== 'pending') {
-      throw new Error('This code was already used or expired');
-    }
-    
-    // ✅ Now that userId is valid, proceed
-    pairedUserId = data.userId;
-    console.log("✅ Paired user ID:", pairedUserId);
-    
-    await docRef.update({
-      status: 'completed',
-      pairedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      pairedUserId: pairedUserId
-    });
-    
-    pairingCodeInput.value = "";
-    showStatus('Paired successfully! Loading camera...', 'success');
+      const data = docSnap.data();
+      console.log("📄 Full pairing doc:", data);
+
+      if (data.status !== 'pending') {
+        throw new Error('This code was already used or expired');
+      }
+
+      await docRef.update({
+        status: 'completed',
+        pairedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        pairedUserId: data.userId
+      });
+
+      pairedUserId = data.userId;
+      console.log("✅ Paired user ID:", pairedUserId);
+
+      pairingCodeInput.value = "";
+      showStatus('Paired successfully! Loading camera...', 'success');
 
       setTimeout(() => {
         pairingSection.classList.remove('active');
