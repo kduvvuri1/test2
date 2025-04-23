@@ -197,7 +197,7 @@
   };
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
-  const storage = firebase.storage();
+  const storage = firebase.app().storage("gs://first-project-418816.firebasestorage.app");
 
   // DOM elements
   const pairingSection = document.getElementById('pairing-section');
